@@ -3,6 +3,7 @@ package drivers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/lxc/lxd/lxd/storage/borg"
 	"io"
 	"os"
 	"strings"
@@ -1627,5 +1628,45 @@ func (d *ceph) RenameVolumeSnapshot(snapVol Volume, newSnapshotName string, op *
 	}
 
 	revert.Success()
+	return nil
+}
+
+// BorgCreateVolumeSnapshot creates a snapshot of a volume using borg.
+func (d *ceph) BorgCreateVolumeSnapshot(snapVol Volume, op *operations.Operation) error {
+	parentName, _, _ := shared.InstanceGetParentAndSnapshotName(snapVol.name)
+	srcPath := GetVolumeMountPath(d.name, snapVol.volType, parentName)
+	// snapPath := snapVol.MountPath()
+
+	repo := borg.GetBorgRepo(d.Config(), parentName)
+
+	err := borg.BorgPrepare(repo)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = borg.BorgCreate(repo, snapVol.name, srcPath)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// BorgRestoreVolume restores a volume from a borg archive snapshot.
+func (d *ceph) BorgRestoreVolume(vol Volume, snapshotName string, op *operations.Operation) error {
+	parentName, _, _ := shared.InstanceGetParentAndSnapshotName(vol.name)
+
+	repo := borg.GetBorgRepo(d.Config(), parentName)
+
+	volPath := vol.MountPath()
+
+	_, err := borg.BorgRestore(repo, snapshotName, volPath)
+
+	if err != nil {
+		return errors.Wrap(err, "Failed to borg restore volume")
+	}
+
 	return nil
 }
