@@ -3,6 +3,7 @@ package drivers
 import (
 	"bufio"
 	"fmt"
+	"github.com/lxc/lxd/lxd/storage/borg"
 	"io"
 	"io/ioutil"
 	"math"
@@ -1127,6 +1128,46 @@ func (d *lvm) RenameVolumeSnapshot(snapVol Volume, newSnapshotName string, op *o
 	err = os.Rename(oldPath, newPath)
 	if err != nil {
 		return errors.Wrapf(err, "Error renaming snapshot mount path from %q to %q", oldPath, newPath)
+	}
+
+	return nil
+}
+
+// BorgCreateVolumeSnapshot creates a snapshot of a volume using borg.
+func (d *lvm) BorgCreateVolumeSnapshot(snapVol Volume, op *operations.Operation) error {
+	parentName, _, _ := shared.InstanceGetParentAndSnapshotName(snapVol.name)
+	srcPath := GetVolumeMountPath(d.name, snapVol.volType, parentName)
+	// snapPath := snapVol.MountPath()
+
+	repo := borg.GetBorgRepo(d.Config(), parentName)
+
+	err := borg.BorgPrepare(repo)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = borg.BorgCreate(repo, snapVol.name, srcPath)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// BorgRestoreVolume restores a volume from a borg archive snapshot.
+func (d *lvm) BorgRestoreVolume(vol Volume, snapshotName string, op *operations.Operation) error {
+	parentName, _, _ := shared.InstanceGetParentAndSnapshotName(vol.name)
+
+	repo := borg.GetBorgRepo(d.Config(), parentName)
+
+	volPath := vol.MountPath()
+
+	_, err := borg.BorgRestore(repo, snapshotName, volPath)
+
+	if err != nil {
+		return errors.Wrap(err, "Failed to borg restore volume")
 	}
 
 	return nil

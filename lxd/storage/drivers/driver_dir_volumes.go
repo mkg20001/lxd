@@ -13,6 +13,7 @@ import (
 	"github.com/lxc/lxd/lxd/operations"
 	"github.com/lxc/lxd/lxd/revert"
 	"github.com/lxc/lxd/lxd/rsync"
+	"github.com/lxc/lxd/lxd/storage/borg"
 	"github.com/lxc/lxd/lxd/storage/quota"
 	"github.com/lxc/lxd/shared"
 	"github.com/lxc/lxd/shared/instancewriter"
@@ -478,4 +479,44 @@ func (d *dir) RestoreVolume(vol Volume, snapshotName string, op *operations.Oper
 // RenameVolumeSnapshot renames a volume snapshot.
 func (d *dir) RenameVolumeSnapshot(snapVol Volume, newSnapshotName string, op *operations.Operation) error {
 	return genericVFSRenameVolumeSnapshot(d, snapVol, newSnapshotName, op)
+}
+
+// BorgCreateVolumeSnapshot creates a snapshot of a volume using borg.
+func (d *dir) BorgCreateVolumeSnapshot(snapVol Volume, op *operations.Operation) error {
+	parentName, _, _ := shared.InstanceGetParentAndSnapshotName(snapVol.name)
+	srcPath := GetVolumeMountPath(d.name, snapVol.volType, parentName)
+	// snapPath := snapVol.MountPath()
+
+	repo := borg.GetBorgRepo(d.Config(), parentName)
+
+	err := borg.BorgPrepare(repo)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = borg.BorgCreate(repo, snapVol.name, srcPath)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// BorgRestoreVolume restores a volume from a borg archive snapshot.
+func (d *dir) BorgRestoreVolume(vol Volume, snapshotName string, op *operations.Operation) error {
+	parentName, _, _ := shared.InstanceGetParentAndSnapshotName(vol.name)
+
+	repo := borg.GetBorgRepo(d.Config(), parentName)
+
+	volPath := vol.MountPath()
+
+	_, err := borg.BorgRestore(repo, snapshotName, volPath)
+
+	if err != nil {
+		return errors.Wrap(err, "Failed to borg restore volume")
+	}
+
+	return nil
 }
