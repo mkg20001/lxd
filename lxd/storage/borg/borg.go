@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/lxc/lxd/shared"
 	"github.com/lxc/lxd/shared/logger"
+	"github.com/pkg/errors"
 	"os/exec"
 	"regexp"
 )
@@ -144,11 +145,32 @@ func RunBorg(repo map[string]string, extraBorgEnv map[string]string, borgArgs ..
 	return msg, nil
 }
 
+func rmRF(folder string) error {
+	if (folder == "" || folder == "/") {
+		return errors.New("Tried to delete root")
+	}
+
+	_, msgE, err := shared.RunCommandE("find", folder, "-mindepth", "1", "-delete")
+	if err != nil {
+		runError, ok := err.(shared.RunError)
+		if ok {
+			exitError, _ := runError.Err.(*exec.ExitError)
+			if exitError.ExitCode() != 0 {
+				logger.Crit(msgE)
+				return exitError
+			}
+		}
+		return err
+	}
+
+	return nil
+}
+
 // BorgCreate creates a borgbackup in the specified repo of the specified folder
 func BorgCreate(repo map[string]string, name string, sourceFolder string) (string, error) {
 	name = nameEscape(name)
 
-	logger.Infof("Create %s on %s", name, repo["repo"])
+	logger.Infof("Create %s on %s from %s", name, repo["repo"], sourceFolder)
 
 	return RunBorg(
 		repo,
@@ -190,9 +212,19 @@ func BorgPrepare(repo map[string]string) error {
 func BorgRestore(repo map[string]string, name string, destFolder string) (string, error) {
 	name = nameEscape(name)
 
+	logger.Infof("Clear up %s", destFolder)
+
+	err := rmRF(destFolder)
+
+	if err != nil {
+		return "", err
+	}
+
+	logger.Infof("Extract %s", destFolder)
+
  	return RunBorg(repo, map[string]string {
 		"SET_CWD": destFolder,
-	}, "extract", "::" + name, ".")
+	}, "extract", "::" + name, "--list")
 }
 
 // BorgDelete removes a given archive
