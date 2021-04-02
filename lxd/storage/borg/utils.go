@@ -1,6 +1,8 @@
 package borg
 
-import "github.com/lxc/lxd/shared"
+import (
+	"github.com/lxc/lxd/shared"
+)
 
 func IsBorg(config map[string]string) bool {
 	return shared.IsTrue(config["borg.enabled"])

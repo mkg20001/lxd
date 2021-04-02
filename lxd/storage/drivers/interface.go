@@ -88,4 +88,8 @@ type Driver interface {
 	// Backup.
 	BackupVolume(vol Volume, tarWriter *instancewriter.InstanceTarWriter, optimized bool, snapshots []string, op *operations.Operation) error
 	CreateVolumeFromBackup(vol Volume, srcBackup backup.Info, srcData io.ReadSeeker, op *operations.Operation) (VolumePostHook, revert.Hook, error)
+
+	// Borg
+	BorgCreateVolumeSnapshot(snapVol Volume, op *operations.Operation) error
+	BorgRestoreVolume(vol Volume, snapshotName string, op *operations.Operation) error
 }

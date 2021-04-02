@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"github.com/lxc/lxd/lxd/storage/borg"
 	"io"
 	"os"
 	"path/filepath"
@@ -1911,7 +1912,14 @@ func (b *lxdBackend) CreateInstanceSnapshot(inst instance.Instance, src instance
 	// There's no need to pass config as it's not needed when creating volume snapshots.
 	vol := b.newVolume(volType, contentType, volStorageName, nil)
 
-	err = b.driver.CreateVolumeSnapshot(vol, op)
+	if borg.IsBorg(b.driver.Config()) {
+		logger.Info("CreateInstanceSnapshot has detected borg, using borg")
+		err = b.driver.BorgCreateVolumeSnapshot(vol, op)
+		logger.Info("CreateInstanceSnapshot has finished doing borg operations")
+	} else {
+		err = b.driver.CreateVolumeSnapshot(vol, op)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -2101,7 +2109,11 @@ func (b *lxdBackend) RestoreInstanceSnapshot(inst instance.Instance, src instanc
 
 	// Use the source snapshot's rootfs config (as this will later be restored into inst too).
 	vol := b.newVolume(volType, contentType, volStorageName, rootDiskConf)
-	err = b.driver.RestoreVolume(vol, snapshotName, op)
+	if borg.IsBorg(b.driver.Config())  {
+		err = b.driver.BorgRestoreVolume(vol, snapshotName, op)
+	} else {
+		err = b.driver.RestoreVolume(vol, snapshotName, op)
+	}
 	if err != nil {
 		snapErr, ok := err.(drivers.ErrDeleteSnapshots)
 		if ok {
