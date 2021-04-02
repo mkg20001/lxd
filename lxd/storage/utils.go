@@ -364,6 +364,11 @@ func validatePoolCommonRules() map[string]func(string) error {
 		"size":                    validate.Optional(validate.IsSize),
 		"rsync.bwlimit":           validate.IsAny,
 		"rsync.compression":       validate.Optional(validate.IsBool),
+		// borg stuff
+		"borg.enabled": validate.Optional(validate.IsBool),
+		"borg.repo": validate.Optional(validate.IsAny),
+		"borg.sshpass": validate.Optional(validate.IsAny),
+		"borg.sshkey": validate.Optional(validate.IsAny),
 	}
 }
 
@@ -409,6 +414,9 @@ func validateVolumeCommonRules(vol drivers.Volume) map[string]func(string) error
 	if vol.Type() == drivers.VolumeTypeImage {
 		rules["volatile.rootfs.size"] = validate.Optional(validate.IsInt64)
 	}
+
+	// we use this to check if restore uses borg or not
+	rules["borg.createdWith"] = validate.Optional(validate.IsBool)
 
 	return rules
 }
