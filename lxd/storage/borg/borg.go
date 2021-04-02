@@ -3,7 +3,9 @@ package borg
 import (
 	"fmt"
 	"github.com/lxc/lxd/shared"
+	"github.com/lxc/lxd/shared/logger"
 	"os/exec"
+	"regexp"
 )
 
 // each volume has it's own repo
@@ -74,6 +76,12 @@ import (
 
  */
 
+func nameEscape(name string) string {
+	removePath := regexp.MustCompile(`^.+\/`)
+
+	return removePath.ReplaceAllString(name, "")
+}
+
 // RUnBorg spawns a borgbackup instance with predefined environment and arguments
 func RunBorg(repo map[string]string, extraBorgEnv map[string]string, borgArgs ...string) (string, error) {
 	/* borgVerbosity := "-q"
@@ -110,20 +118,24 @@ func RunBorg(repo map[string]string, extraBorgEnv map[string]string, borgArgs ..
 	}
 
 	// set command
-	args = append(args, "borg-wrapped")
+	args = append(args, "borg-wrapper")
 
 	// append arguments
 	args = append(args, borgArgs...)
 
-	msg, err := shared.RunCommand("env")
+	msg, msgE, err := shared.RunCommandE("env", args...)
 	if err != nil {
 		runError, ok := err.(shared.RunError)
 		if ok {
-			exitError, ok := runError.Err.(*exec.ExitError)
-			if ok {
+			exitError, _ := runError.Err.(*exec.ExitError)
+			/* if ok {
 				if exitError.ExitCode() == 24 {
 					return msg, nil
 				}
+			} */
+			if exitError.ExitCode() != 0 {
+				logger.Crit(msgE)
+				return msg, exitError
 			}
 		}
 		return msg, err
@@ -134,6 +146,10 @@ func RunBorg(repo map[string]string, extraBorgEnv map[string]string, borgArgs ..
 
 // BorgCreate creates a borgbackup in the specified repo of the specified folder
 func BorgCreate(repo map[string]string, name string, sourceFolder string) (string, error) {
+	name = nameEscape(name)
+
+	logger.Infof("Create %s on %s", name, repo["repo"])
+
 	return RunBorg(
 		repo,
 		map[string]string{
@@ -151,11 +167,14 @@ func BorgInit(repo map[string]string) (string, error) {
 
 // BorgPrepare checks if the repo exists and initializes it if it doesn't
 func BorgPrepare(repo map[string]string) error {
+	logger.Infof("Check %s", repo["repo"])
+
 	_, err := RunBorg(repo, map[string]string{
 		"YES_PIPE": "1",
 	}, "list")
 
 	if err != nil {
+		logger.Infof("Must init %s", repo["repo"])
 		_, err = BorgInit(repo)
 		if err != nil {
 			return err
@@ -169,13 +188,17 @@ func BorgPrepare(repo map[string]string) error {
 
 // BorgRestore restores a given archive to a given folder
 func BorgRestore(repo map[string]string, name string, destFolder string) (string, error) {
-	return RunBorg(repo, map[string]string {
+	name = nameEscape(name)
+
+ 	return RunBorg(repo, map[string]string {
 		"SET_CWD": destFolder,
 	}, "extract", "::" + name, ".")
 }
 
 // BorgDelete removes a given archive
 func BorgDelete(repo map[string]string, name string) (string, error) {
+	name = nameEscape(name)
+
 	return RunBorg(repo, map[string]string {
 		"YeS_PIPE": "1",
 	}, "delete", "::" + name, "--force")

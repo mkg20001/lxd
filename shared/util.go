@@ -916,6 +916,13 @@ func RunCommand(name string, arg ...string) (string, error) {
 	return stdout, err
 }
 
+// RunCommand runs a command with optional arguments and returns stdout. If the command fails to
+// start or returns a non-zero exit code then an error is returned containing the output of stderr.
+func RunCommandE(name string, arg ...string) (string, string, error) {
+	stdout, stderr, err := RunCommandSplit(nil, nil, name, arg...)
+	return stdout, stderr, err
+}
+
 // RunCommandInheritFds runs a command with optional arguments and passes a set
 // of file descriptors to the newly created process, returning stdout. If the
 // command fails to start or returns a non-zero exit code then an error is

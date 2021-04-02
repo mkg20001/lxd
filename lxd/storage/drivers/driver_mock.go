@@ -202,3 +202,13 @@ func (d *mock) RestoreVolume(vol Volume, snapshotName string, op *operations.Ope
 func (d *mock) RenameVolumeSnapshot(snapVol Volume, newSnapshotName string, op *operations.Operation) error {
 	return nil
 }
+
+// BorgCreateVolumeSnapshot creates a snapshot of a volume using borg.
+func (d *mock) BorgCreateVolumeSnapshot(snapVol Volume, op *operations.Operation) error {
+	return nil
+}
+
+// BorgRestoreVolume restores a volume from a borg archive snapshot.
+func (d *mock) BorgRestoreVolume(vol Volume, snapshotName string, op *operations.Operation) error {
+	return nil
+}

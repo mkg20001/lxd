@@ -91,6 +91,12 @@ var storagePoolConfigKeys = map[string]func(value string) error{
 
 	// valid drivers: btrfs, ceph, cephfs, zfs
 	"rsync.compression": validate.Optional(validate.IsBool),
+
+	// borg stuff
+	"borg.enabled": validate.Optional(validate.IsBool),
+	"borg.repo": validate.Optional(validate.IsAny),
+	"borg.sshpass": validate.Optional(validate.IsAny),
+	"borg.sshkey": validate.Optional(validate.IsAny),
 }
 
 func storagePoolValidateConfig(name string, driver string, config map[string]string, oldConfig map[string]string) error {

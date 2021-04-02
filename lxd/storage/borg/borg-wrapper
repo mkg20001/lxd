@@ -1,13 +1,13 @@
 #!/bin/bash
 
-set -exo pipefail
+set -ex # o pipefail
 
 if [ -n "$SET_CWD" ]; then
   cd "$SET_CWD"
 fi
 
 if [ -n "$YES_PIPE" ]; then
-  yes | exec borg "$@"
+  yes | borg "$@"
 else
-  exec borg "$@"
+  borg "$@"
 fi
