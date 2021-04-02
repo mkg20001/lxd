@@ -97,13 +97,17 @@ func RunBorg(repo map[string]string, extraBorgEnv map[string]string, borgArgs ..
 	}
 
 	// add passphrase command to env if used
-	if repo["passphrase"] != "" {
+	/* if repo["passphrase"] != "" {
 		borgEnv["BORG_PASSPHRASE"] = repo["passphrase"]
-	}
+	} */
 
 	// add key as -i arg to ssh if used
 	if repo["key"] != "" {
 		borgEnv["BORG_RSH"] = borgEnv["BORG_RSH"] + " -i" + repo["key"]
+	}
+
+	if repo["sshpass"] != "" {
+		borgEnv["SSH_PASS"] = repo["sshpass"]
 	}
 
 	// concat borgEnv

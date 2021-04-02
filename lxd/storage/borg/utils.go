@@ -11,7 +11,7 @@ func IsBorg(config map[string]string) bool {
 func GetBorgRepo(config map[string]string, volName string) map[string]string {
 	return map[string]string { // TODO: review all is named right
 		"repo": config["borg.repo"] + "/" + volName,
-		"passphrase": config["borg.sshpass"],
+		"sshpass": config["borg.sshpass"],
 		"key": config["borg.sshkey"],
 	}
 }
