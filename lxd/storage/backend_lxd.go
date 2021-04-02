@@ -2040,10 +2040,17 @@ func (b *lxdBackend) DeleteInstanceSnapshot(inst instance.Instance, op *operatio
 	// There's no need to pass config as it's not needed when deleting a volume snapshot.
 	vol := b.newVolume(volType, contentType, snapVolName, nil)
 
-	if b.driver.HasVolume(vol) {
-		err = b.driver.DeleteVolumeSnapshot(vol, op)
+	if borg.IsBorg(b.driver.Config()) {
+		err = b.driver.BorgDeleteVolumeSnapshot(vol, op)
 		if err != nil {
 			return err
+		}
+	} else {
+		if b.driver.HasVolume(vol) {
+			err = b.driver.DeleteVolumeSnapshot(vol, op)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

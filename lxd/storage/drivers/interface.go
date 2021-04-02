@@ -92,4 +92,5 @@ type Driver interface {
 	// Borg
 	BorgCreateVolumeSnapshot(snapVol Volume, op *operations.Operation) error
 	BorgRestoreVolume(vol Volume, snapshotName string, op *operations.Operation) error
+	BorgDeleteVolumeSnapshot(snapVol Volume, op *operations.Operation) error
 }

@@ -213,3 +213,9 @@ func (d *mock) BorgCreateVolumeSnapshot(snapVol Volume, op *operations.Operation
 func (d *mock) BorgRestoreVolume(vol Volume, snapshotName string, op *operations.Operation) error {
 	return nil
 }
+
+// BorgDeleteVolumeSnapshot removes a snapshot from the designated borg repository
+// and removes the stub folder if any.
+func (d *mock) BorgDeleteVolumeSnapshot(snapVol Volume, op *operations.Operation) error {
+	return nil
+}

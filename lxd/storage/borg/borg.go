@@ -235,6 +235,8 @@ func BorgRestore(repo map[string]string, name string, destFolder string) (string
 func BorgDelete(repo map[string]string, name string) (string, error) {
 	name = nameEscape(name)
 
+	logger.Infof("Delete %s on %s", repo["repo"], name)
+
 	return RunBorg(repo, map[string]string {
 		"YeS_PIPE": "1",
 	}, "delete", "::" + name, "--force")

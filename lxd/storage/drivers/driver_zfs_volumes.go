@@ -1903,7 +1903,6 @@ func (d *zfs) RenameVolumeSnapshot(vol Volume, newSnapshotName string, op *opera
 func (d *zfs) BorgCreateVolumeSnapshot(snapVol Volume, op *operations.Operation) error {
 	parentName, _, _ := shared.InstanceGetParentAndSnapshotName(snapVol.name)
 	srcPath := GetVolumeMountPath(d.name, snapVol.volType, parentName)
-	// snapPath := snapVol.MountPath()
 
 	repo := borg.GetBorgRepo(d.Config(), parentName)
 
@@ -1934,6 +1933,36 @@ func (d *zfs) BorgRestoreVolume(vol Volume, snapshotName string, op *operations.
 
 	if err != nil {
 		return errors.Wrap(err, "Failed to borg restore volume")
+	}
+
+	return nil
+}
+
+// BorgDeleteVolumeSnapshot removes a snapshot from the designated borg repository
+// and removes the stub folder if any.
+func (d *zfs) BorgDeleteVolumeSnapshot(snapVol Volume, op *operations.Operation) error {
+	snapPath := snapVol.MountPath()
+
+	// Remove the snapshot from the storage device.
+	err := forceRemoveAll(snapPath)
+	if err != nil && !os.IsNotExist(err) {
+		return errors.Wrapf(err, "Failed to remove '%s'", snapPath)
+	}
+
+	parentName, _, _ := shared.InstanceGetParentAndSnapshotName(snapVol.name)
+
+	repo := borg.GetBorgRepo(d.Config(), parentName)
+
+	_, err = borg.BorgDelete(repo, snapVol.name)
+
+	if err != nil {
+		return err
+	}
+
+	// Remove the parent snapshot directory if this is the last snapshot being removed.
+	err = deleteParentSnapshotDirIfEmpty(d.name, snapVol.volType, parentName)
+	if err != nil {
+		return err
 	}
 
 	return nil
