@@ -181,7 +181,7 @@ func BorgCreate(repo map[string]string, name string, sourceFolder string) (strin
 		map[string]string{
 			"SET_CWD": sourceFolder,
 		},
-		"create", "--list", "--stats", "::" + name,
+		"create", "--stats", "::" + name,
 		".")
 }
 
@@ -228,7 +228,7 @@ func BorgRestore(repo map[string]string, name string, destFolder string) (string
 
  	return RunBorg(repo, map[string]string {
 		"SET_CWD": destFolder,
-	}, "extract", "::" + name, "--list")
+	}, "extract", "::" + name)
 }
 
 // BorgDelete removes a given archive
