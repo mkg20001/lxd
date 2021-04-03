@@ -133,12 +133,11 @@ func RunBorg(repo map[string]string, extraBorgEnv map[string]string, borgArgs ..
 		runError, ok := err.(shared.RunError)
 		if ok {
 			exitError, _ := runError.Err.(*exec.ExitError)
-			/* if ok {
-				if exitError.ExitCode() == 24 {
-					return msg, nil
-				}
-			} */
-			if exitError.ExitCode() != 0 {
+			if exitError.ExitCode() == 1 { // ignore warning
+				logger.Warnf("Borg warning %s", msg)
+				logger.Warnf("Borg warning %s", msgE)
+				return msg, nil
+			} else if exitError.ExitCode() != 0 {
 				logger.Crit(msgE)
 				return msg, exitError
 			}
