@@ -2,6 +2,7 @@ package drivers
 
 import (
 	"fmt"
+	"github.com/lxc/lxd/shared/logger"
 	"io"
 	"os"
 	"path/filepath"
@@ -135,6 +136,8 @@ func (d *dir) CreateVolumeFromCopy(vol Volume, srcVol Volume, copySnapshots bool
 	var err error
 	var srcSnapshots []Volume
 
+	logger.Infof("Copy vol %s snap=%s to %s", srcVol.Name(), srcVol.IsSnapshot(), vol.Name())
+
 	if copySnapshots && !srcVol.IsSnapshot() {
 		// Get the list of snapshots from the source.
 		srcSnapshots, err = srcVol.Snapshots(op)
@@ -144,7 +147,29 @@ func (d *dir) CreateVolumeFromCopy(vol Volume, srcVol Volume, copySnapshots bool
 	}
 
 	// Run the generic copy.
-	return genericVFSCopyVolume(d, d.setupInitialQuota, vol, srcVol, srcSnapshots, false, op)
+	if borg.IsBorg(d.Config()) && srcVol.IsSnapshot() {
+		logger.Infof("CreateVolumeCopy has detected borg, restoring snapshot using borg")
+		parentName, _, _ := shared.InstanceGetParentAndSnapshotName(srcVol.name)
+
+		repo := borg.GetBorgRepo(d.Config(), parentName)
+
+		// NOTE: vol is target, so this is correct
+		err := vol.EnsureMountPath()
+		if err != nil {
+			return err
+		}
+		volPath := vol.MountPath()
+
+		_, err = borg.BorgRestore(repo, srcVol.name, volPath)
+
+		if err != nil {
+			return errors.Wrap(err, "Failed to borg restore volume")
+		}
+
+		return err
+	} else {
+		return genericVFSCopyVolume(d, d.setupInitialQuota, vol, srcVol, srcSnapshots, false, op)
+	}
 }
 
 // CreateVolumeFromMigration creates a volume being sent via a migration.
