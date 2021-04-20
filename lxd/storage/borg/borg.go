@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"os/exec"
 	"regexp"
+	"sync"
 )
 
 // each volume has it's own repo
@@ -83,12 +84,21 @@ func nameEscape(name string) string {
 	return removePath.ReplaceAllString(name, "")
 }
 
+var lock = map[string]*sync.Mutex{}
+
 // RUnBorg spawns a borgbackup instance with predefined environment and arguments
 func RunBorg(repo map[string]string, extraBorgEnv map[string]string, borgArgs ...string) (string, error) {
 	/* borgVerbosity := "-q"
 	if Debug {
 		borgVerbosity = "-vi"
 	} */
+
+	if lock[repo["repo"]] == nil {
+		lock[repo["repo"]] = &sync.Mutex{}
+	}
+	mutex := lock[repo["repo"]]
+	mutex.Lock()
+	defer mutex.Unlock()
 
 	borgEnv := map[string]string{
 		"BORG_REPO": repo["repo"],
