@@ -12,8 +12,10 @@ if [ -n "$SET_CWD" ]; then
   cd "$SET_CWD"
 fi
 
-if [ -n "$YES_PIPE" ]; then
-  yes | "${_borg[@]}" "$@"
-else
-  "${_borg[@]}" "$@"
-fi
+#if [ -n "$YES_PIPE" ]; then
+#  yes | "${_borg[@]}" "$@"
+#else
+#  "${_borg[@]}" "$@"
+#fi
+
+yes | "${_borg[@]}" "$@"
