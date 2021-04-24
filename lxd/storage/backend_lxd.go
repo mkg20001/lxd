@@ -3346,7 +3346,11 @@ func (b *lxdBackend) CreateCustomVolumeSnapshot(projectName, volName string, new
 	vol := b.newVolume(drivers.VolumeTypeCustom, contentType, volStorageName, parentVol.Config)
 
 	// Create the snapshot on the storage device.
-	err = b.driver.CreateVolumeSnapshot(vol, op)
+	if borg.IsBorg(b.driver.Config()) {
+		err = b.driver.BorgCreateVolumeSnapshot(vol, op)
+	} else {
+		err = b.driver.CreateVolumeSnapshot(vol, op)
+	}
 	if err != nil {
 		return err
 	}
@@ -3438,10 +3442,17 @@ func (b *lxdBackend) DeleteCustomVolumeSnapshot(projectName, volName string, op 
 
 	// Delete the snapshot from the storage device.
 	// Must come before DB RemoveStoragePoolVolume so that the volume ID is still available.
-	if b.driver.HasVolume(vol) {
-		err := b.driver.DeleteVolumeSnapshot(vol, op)
+	if borg.IsBorg(b.driver.Config()) {
+		err = b.driver.BorgDeleteVolumeSnapshot(vol, op)
 		if err != nil {
 			return err
+		}
+	} else {
+		if b.driver.HasVolume(vol) {
+			err := b.driver.DeleteVolumeSnapshot(vol, op)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -3520,26 +3531,31 @@ func (b *lxdBackend) RestoreCustomVolume(projectName, volName string, snapshotNa
 	volStorageName := project.StorageVolume(projectName, volName)
 	vol := b.newVolume(drivers.VolumeTypeCustom, contentType, volStorageName, dbVol.Config)
 
-	err = b.driver.RestoreVolume(vol, snapshotName, op)
-	if err != nil {
-		snapErr, ok := err.(drivers.ErrDeleteSnapshots)
-		if ok {
-			// We need to delete some snapshots and try again.
-			for _, snapName := range snapErr.Snapshots {
-				err := b.DeleteCustomVolumeSnapshot(projectName, fmt.Sprintf("%s/%s", volName, snapName), op)
+	if borg.IsBorg(b.driver.Config()) {
+		err = b.driver.BorgRestoreVolume(vol, snapshotName, op)
+		return err
+	} else {
+		err = b.driver.RestoreVolume(vol, snapshotName, op)
+		if err != nil {
+			snapErr, ok := err.(drivers.ErrDeleteSnapshots)
+			if ok {
+				// We need to delete some snapshots and try again.
+				for _, snapName := range snapErr.Snapshots {
+					err := b.DeleteCustomVolumeSnapshot(projectName, fmt.Sprintf("%s/%s", volName, snapName), op)
+					if err != nil {
+						return err
+					}
+				}
+
+				// Now try again.
+				err = b.driver.RestoreVolume(vol, snapshotName, op)
 				if err != nil {
 					return err
 				}
 			}
 
-			// Now try again.
-			err = b.driver.RestoreVolume(vol, snapshotName, op)
-			if err != nil {
-				return err
-			}
+			return err
 		}
-
-		return err
 	}
 
 	return nil
